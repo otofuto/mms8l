@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -192,6 +193,8 @@ func IndexHandle(w http.ResponseWriter, r *http.Request) {
 			filename = "mail"
 		} else if r.URL.Path == "/history" {
 			filename = "history"
+		} else if r.URL.Path == "/open" {
+			filename = "open"
 		}
 		if filename == "" {
 			Page404(w)
@@ -362,12 +365,14 @@ type CustomerGroupMember struct {
 }
 
 type Email struct {
-	Id        int    `json:"id"`
-	GroupId   int    `json:"group_id"`
-	GroupName string `json:"group_name"`
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	SentAt    string `json:"sent_at"`
+	Id          int           `json:"id"`
+	GroupId     int           `json:"group_id"`
+	GroupName   string        `json:"group_name"`
+	Title       string        `json:"title"`
+	Body        string        `json:"body"`
+	SentAt      string        `json:"sent_at"`
+	MemberCount int           `json:"member_count"`
+	OpenCount   sql.NullInt64 `json:"open_count"`
 }
 
 func ApiHandle(w http.ResponseWriter, r *http.Request) {
@@ -595,7 +600,15 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 			body := r.FormValue("body")
 			db := database.Connect()
 			defer db.Close()
-			q := "select email.id, group_id, gname, title, body, sent_at from email left outer join customer_group on email.group_id = customer_group.id"
+			q := `select email.id, email.group_id, gname, title, body, sent_at, mem_cnt, opn_cnt
+			from email
+			left outer join customer_group on email.group_id = customer_group.id
+			left outer join (
+				select group_id, count(*) as mem_cnt from customer_group_member group by group_id
+			) as tbl_mem on email.group_id = tbl_mem.group_id
+			left outer join (
+				select email_id, count(*) as opn_cnt from open_log group by email_id
+			) as tbl_opn on email.id = tbl_opn.email_id`
 			where := make([]string, 0)
 			if group > 0 {
 				where = append(where, "group_id = "+strconv.Itoa(group))
@@ -621,7 +634,7 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 			ret := make([]Email, 0)
 			for rows.Next() {
 				var e Email
-				err = rows.Scan(&e.Id, &e.GroupId, &e.GroupName, &e.Title, &e.Body, &e.SentAt)
+				err = rows.Scan(&e.Id, &e.GroupId, &e.GroupName, &e.Title, &e.Body, &e.SentAt, &e.MemberCount, &e.OpenCount)
 				if err != nil {
 					log.Println(err)
 					ApiResponse(w, false, "データベースエラー")

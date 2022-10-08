@@ -24,6 +24,7 @@
                 box-sizing: border-box;
                 background-color: #0008;
                 overflow: auto;
+                backdrop-filter: blur(3px);
             }
 
             #grayback>div {
@@ -64,6 +65,11 @@
                 font-size: 0.8em;
             }
 
+            #maillist label {
+                margin-left: 10px;
+                font-size: 0.8em;
+            }
+
             #maillist>div>div:nth-of-type(1):before {
                 content: 'グループ名: ';
             }
@@ -101,7 +107,7 @@
         </div>
         <div id="grayback" style="display: none;">
             <div>
-                <h2>内容確認</h2>
+                <p id="open_probability"></p>
                 <p>グループ名: <span id="group_name"></span></p>
                 <p>送信先: <span id="group_member"></span></p>
                 <p>件名: <span id="title"></span></p>
@@ -150,6 +156,7 @@
                 get('/api/member', {'id': group_id}).then(res => {
                     if (res.result) {
                         document.getElementById('grayback').removeAttribute('style');
+                        document.getElementById('open_probability').innerText = div.querySelector('label').innerText;
                         document.getElementById('group_name').innerText = div.querySelector('div').innerText;
                         document.getElementById('group_name').setAttribute('data-groupid', group_id);
                         let members = [];
@@ -203,6 +210,9 @@
                 let sent = document.createElement('time');
                 sent.innerText = e.sent_at;
                 div.appendChild(sent);
+                let lbl = document.createElement('label');
+                lbl.innerText = '開封率: ' + e.open_count.Int64 + '/' + e.member_count + ' (' + Math.round(e.open_count.Int64 / e.member_count * 100) + '%)';
+                div.appendChild(lbl);
                 let group = document.createElement('div');
                 group.setAttribute('data-groupid', e.group_id);
                 group.innerText = e.group_name;
