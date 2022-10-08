@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?a">
+        <script src="/st/master.js"></script>
+        <style>
+            #appendBox {
+                height: 2em;
+                overflow: hidden;
+            }
+
+            #appendBox>button {
+                width: 100%;
+            }
+
+            #cusList {
+                display: flex;
+                position: relative;
+                flex-wrap: wrap;
+                justify-content: space-around;
+            }
+
+            #cusList>div {
+                display: block;
+                position: relative;
+                width: 300px;
+                max-width: 100%;
+            }
+
+            @media (max-width: 600px) {
+                #cusList>div {
+                    width: 98%;
+                }
+            }
+
+            #cusList>div>div:nth-of-type(1) {
+                background-color: #e8e8e8;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            #cusList>div>div:nth-of-type(1) button {
+                display: block;
+                border: none;
+                background-color: #e8e8e8;
+            }
+
+            #cusList>div>div svg {
+                height: 1.5em;
+                vertical-align: middle;
+            }
+
+            pre {
+                display: inline-block;
+                vertical-align: top;
+                margin: 2px 0;
+                font-family: "メイリオ";
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>顧客リスト</h1>
+            <p><a href="/top">戻る</a></p>
+            <div id="appendBox">
+                <button onclick="openBox()">追加</button>
+                <form name="fm" onsubmit="appendCus(); return false;">
+                    <p>担当者名</p>
+                    <p><input type="text" name="manager" maxlength="127" required></p>
+                    <p>会社名</p>
+                    <p><input type="text" name="corp" maxlength="127"></p>
+                    <p>メールアドレス</p>
+                    <p><input type="email" name="email" maxlength="255" required></p>
+                    <p>電話番号</p>
+                    <p><input type="tel" name="tel" maxlength="12"></p>
+                    <p>メモ</p>
+                    <p><textarea name="memo"></textarea></p>
+                    <p><input type="submit" value="決定"></p>
+                </form>
+            </div>
+            <div>
+                <span>ソート: </span>
+                <button onclick="sort('id')">登録順</button>
+                <button onclick="sort('manager')">顧客名</button>
+                <button onclick="sort('corp')">会社名</button>
+            </div>
+            <div id="cusList"></div>
+            <div id="page"></div>
+            <div id="pagebuttons"></div>
+        </div>
+        <div style="display: none;">
+            <svg id="mail" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            <svg id="office" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+            <svg id="phone" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+            <svg id="text" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <svg id="pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+        </div>
+        <script>
+            list('{{ .Page }}', '{{ .Sort }}');
+            function list(page, sort) {
+                get('/api/customer', {'p': page, 's': sort}).then(res => {
+                    if (res.result) {
+                        res.customer.forEach(c => {
+                            document.getElementById('cusList').appendChild(viewCus(c));
+                        });
+                        document.getElementById('page').innerText = 'Page: {{ .Page }} / ' + res.page_length;
+                        page -= 0;
+                        if (page > 4) {
+                            addPageButton(1);
+                        }
+                        if (page > 5) {
+                            document.getElementById('pagebuttons').appendChild(document.createTextNode('...'));
+                        }
+                        if (page > 3) {
+                            addPageButton(page - 3);
+                        }
+                        if (page > 2) {
+                            addPageButton(page - 2);
+                        }
+                        if (page > 1) {
+                            addPageButton(page - 1);
+                        }
+                        document.getElementById('pagebuttons').appendChild(document.createTextNode(page));
+                        if (page + 1 <= res.page_length) {
+                            addPageButton(page + 1);
+                        }
+                        if (page + 2 <= res.page_length) {
+                            addPageButton(page + 2);
+                        }
+                        if (page + 3 <= res.page_length) {
+                            addPageButton(page + 3);
+                        }
+                        if (page + 4 == res.page_length) {
+                            addPageButton(page + 4);
+                        }
+                        if (page + 4 < res.page_length) {
+                            document.getElementById('pagebuttons').appendChild(document.createTextNode('...'));
+                            addPageButton(res.page_length);
+                        }
+                    } else {
+                        alert(res.message);
+                    }
+                }).catch(err => {
+                    alert('エラーにより一覧の取得に失敗しました。');
+                });
+            }
+
+            function addPageButton(p) {
+                let anc = document.createElement('a');
+                anc.innerText = p;
+                anc.href = '/customer?p=' + p + '&s={{ .Sort }}';
+                document.getElementById('pagebuttons').appendChild(anc);
+            }
+
+            function viewCus(c) {
+                let d = document.createElement('div');
+                let mng = document.createElement('div');
+                mng.appendChild(document.createTextNode(c.manager));
+                let edt = document.createElement('button');
+                edt.appendChild(document.getElementById('pencil').cloneNode(true));
+                edt.setAttribute('onclick', 'editcustomer(' + c.id + ')');
+                mng.appendChild(edt);
+                d.appendChild(mng);
+                let email = document.createElement('div');
+                email.appendChild(document.getElementById('mail').cloneNode(true));
+                let anc = document.createElement('a');
+                anc.href = 'mailTo:' + c.email;
+                anc.innerText = c.email;
+                email.appendChild(anc);
+                d.appendChild(email);
+                let corp = document.createElement('div');
+                corp.appendChild(document.getElementById('office').cloneNode(true));
+                corp.appendChild(document.createTextNode(c.corp));
+                d.appendChild(corp);
+                let tel = document.createElement('div');
+                tel.appendChild(document.getElementById('phone').cloneNode(true));
+                tel.appendChild(document.createTextNode(c.tel));
+                d.appendChild(tel);
+                let memo = document.createElement('div');
+                memo.appendChild(document.getElementById('text').cloneNode(true));
+                let pre = document.createElement('pre');
+                pre.innerText = c.memo;
+                memo.appendChild(pre);
+                d.appendChild(memo);
+                return d;
+            }
+
+            function openBox() {
+                let ab = document.getElementById('appendBox');
+                ab.style.height = ab.style.height == 'auto' ? '2em' : 'auto';
+            }
+
+            function appendCus() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                post('/api/customer', data).then(res => {
+                    if (res.result) {
+                        document.getElementById('cusList').prepend(viewCus(res.customer));
+                        formDisabled(document.fm, false);
+                        document.fm.manager.value = '';
+                        document.fm.email.value = '';
+                        document.fm.corp.value = '';
+                        document.fm.tel.value = '';
+                        document.fm.memo.value = '';
+                    } else {
+                        alert(res.message);
+                        formDisabled(document.fm, false);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより追加に失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+
+            function editcustomer(id) {
+                let query = new URLSearchParams({
+                    'returnpath': location.href,
+                    'id': id
+                }).toString();
+                location = '/customer/edit?' + query;
+            }
+
+            function sort(s) {
+                location = '/customer?p={{ .Page }}&s=' + s;
+            }
+        </script>
+    </body>
+</html>

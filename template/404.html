@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?a">
+        <script src="/st/master.js"></script>
+        <style>
+            #appendBox {
+                height: 2em;
+                overflow: hidden;
+            }
+
+            #appendBox>button {
+                width: 100%;
+            }
+
+            #cusList {
+                display: flex;
+                position: relative;
+                flex-wrap: wrap;
+                justify-content: space-around;
+            }
+
+            #cusList>div {
+                display: block;
+                position: relative;
+                width: 300px;
+                max-width: 100%;
+            }
+
+            @media (max-width: 600px) {
+                #cusList>div {
+                    width: 98%;
+                }
+            }
+
+            #cusList>div>div:nth-of-type(1) {
+                background-color: #e8e8e8;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            #cusList>div>div:nth-of-type(1) button {
+                display: block;
+                border: none;
+                background-color: #e8e8e8;
+            }
+
+            #cusList>div>div svg {
+                height: 1.5em;
+                vertical-align: middle;
+            }
+
+            pre {
+                display: inline-block;
+                vertical-align: top;
+                margin: 2px 0;
+                font-family: "メイリオ";
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>このページは存在しません</h1>
+            <p><a href="/top">戻る</a></p>
+        </div>
+    </body>
+</html>

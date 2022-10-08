@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?">
+        <script src="/st/master.js"></script>
+        <style>
+            form {
+                border: solid 0.5px;
+                border-radius: 5px;
+            }
+
+            #grayback {
+                display: block;
+                position: fixed;
+                width: 100vw;
+                height: 100vh;
+                top: 0;
+                left: 0;
+                margin: 0;
+                padding: 10px;
+                box-sizing: border-box;
+                background-color: #0008;
+                overflow: auto;
+            }
+
+            #grayback>div {
+                display: block;
+                position: relative;
+                width: 800px;
+                max-width: 98%;
+                height: auto;
+                top: 2%;
+                margin: 0 auto;
+                box-sizing: border-box;
+                padding: 20px;
+                background-color: white;
+                border-radius: 5px;
+            }
+
+            #group_name {
+                font-weight: bold;
+            }
+
+            #body {
+                width: 100%;
+                height: auto;
+            }
+
+            #maillist {
+                display: block;
+                position: relative;
+            }
+
+            #maillist>div {
+                background-color: rgb(244, 244, 244);
+                margin: 5px;
+            }
+
+            #maillist time {
+                color: dimgray;
+                font-size: 0.8em;
+            }
+
+            #maillist>div>div:nth-of-type(1):before {
+                content: 'グループ名: ';
+            }
+
+            #maillist>div>div:nth-of-type(2):before {
+                content: '件名: ';
+            }
+
+            #maillist>div>div:nth-of-type(3) {
+                font-size: 00.8em;
+                height: 20px;
+                overflow: hidden;
+                color: gray;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>メール送信履歴</h1>
+            <p><a href="/top">戻る</a></p>
+            <form name="fm" onsubmit="searchmail(); return false;">
+                <p>履歴検索</p>
+                <p>送信先グループ</p>
+                <p><input type="search" placeholder="グループ名で検索" onkeypress="searchgroup(this, event)"></p>
+                <p><select name="group" id="grouplist">
+                    <option value selected>選択なし</option>
+                </select></p>
+                <p>件名</p>
+                <p><input type="text" name="title" maxlength="511"></p>
+                <p>本文(HTML)</p>
+                <input type="text" name="body" maxlength="511">
+                <p><button>検索</button></p>
+            </form>
+            <div id="maillist"></div>
+        </div>
+        <div id="grayback" style="display: none;">
+            <div>
+                <h2>内容確認</h2>
+                <p>グループ名: <span id="group_name"></span></p>
+                <p>送信先: <span id="group_member"></span></p>
+                <p>件名: <span id="title"></span></p>
+                <hr>
+                <div id="body"></div>
+                <hr>
+                <div>
+                    <button onclick="closegray()">閉じる</button>
+                    <button onclick="resendmail()">編集</button>
+                </div>
+            </div>
+        </div>
+        <script>
+            function searchgroup(inp, e) {
+                k = e.key;
+                if (k.length > 1) return;
+                if (inp.value + k != "") {
+                    get('/api/group', {'q': inp.value + k}).then(res => {
+                        if (res.result) {
+                            document.getElementById('grouplist').innerHTML = '';
+                            let disopt = document.createElement('option');
+                            disopt.innerText = '選択なし';
+                            disopt.setAttribute('value', '');
+                            document.getElementById('grouplist').appendChild(disopt);
+                            res.group.forEach(g => {
+                                let opt = document.createElement('option');
+                                opt.value = g.id;
+                                opt.innerText = g.group_name;
+                                document.getElementById('grouplist').appendChild(opt);
+                            });
+                            if (res.group.length > 0) {
+                                document.getElementById('grouplist').selectedIndex = 1;
+                            }
+                        } else {
+                            alert(res.message);
+                        }
+                    }).catch(err => {
+                        alert("エラーにより検索に失敗しました");
+                    });
+                }
+            }
+
+            function checkmail(id) {
+                let div = document.querySelector('[data-id="' + id + '"]');
+                let group_id = div.querySelector('[data-groupid]').getAttribute('data-groupid');
+                get('/api/member', {'id': group_id}).then(res => {
+                    if (res.result) {
+                        document.getElementById('grayback').removeAttribute('style');
+                        document.getElementById('group_name').innerText = div.querySelector('div').innerText;
+                        document.getElementById('group_name').setAttribute('data-groupid', group_id);
+                        let members = [];
+                        res.customer.forEach(c => {
+                            members.push(c.manager + '(' + c.email + ')');
+                        })
+                        document.getElementById('group_member').innerText = members.join(', ');
+                        document.getElementById('title').innerText = div.querySelectorAll('div')[1].innerText;
+                        document.getElementById('body').innerHTML = div.querySelectorAll('div')[2].innerText;
+                    } else {
+                        alert(res.message);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーによりグループ情報の取得に失敗しました。');
+                });
+            }
+
+            function closegray() {
+                document.getElementById('grayback').style.display = 'none';
+            }
+
+            searchmail();
+            function searchmail() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                document.getElementById('maillist').innerHTML = '';
+                get('/api/mail', data).then(res => {
+                    if (res.result) {
+                        formDisabled(document.fm, false);
+                        res.email.forEach(e => {
+                            document.getElementById('maillist').appendChild(viewMail(e));
+                        });
+                    } else {
+                        alert(res.message);
+                        formDisabled(document.fm, false);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより送信に失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+
+            function viewMail(e) {
+                let div = document.createElement('div');
+                div.setAttribute('data-id', e.id);
+                div.addEventListener('click', () => {
+                    checkmail(e.id);
+                });
+                let sent = document.createElement('time');
+                sent.innerText = e.sent_at;
+                div.appendChild(sent);
+                let group = document.createElement('div');
+                group.setAttribute('data-groupid', e.group_id);
+                group.innerText = e.group_name;
+                div.appendChild(group);
+                let title = document.createElement('div');
+                title.innerText = e.title;
+                div.appendChild(title);
+                let body = document.createElement('div');
+                body.innerText = e.body;
+                div.appendChild(body);
+                return div;
+            }
+
+            function resendmail() {
+                sessionStorage.setItem('group_name', document.getElementById('group_name').innerText);
+                sessionStorage.setItem('group_id', document.getElementById('group_name').getAttribute('data-groupid'));
+                sessionStorage.setItem('title', document.getElementById('title').innerText);
+                sessionStorage.setItem('body', document.getElementById('body').innerHTML);
+                location = '/mail?resend';
+            }
+        </script>
+    </body>
+</html>

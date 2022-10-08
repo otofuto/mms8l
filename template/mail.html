@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?">
+        <script src="/st/master.js"></script>
+        <style>
+            #grayback {
+                display: block;
+                position: fixed;
+                width: 100vw;
+                height: 100vh;
+                top: 0;
+                left: 0;
+                margin: 0;
+                padding: 10px;
+                box-sizing: border-box;
+                background-color: #0008;
+                overflow: auto;
+            }
+
+            #grayback>div {
+                display: block;
+                position: relative;
+                width: 800px;
+                max-width: 98%;
+                height: auto;
+                top: 2%;
+                margin: 0 auto;
+                box-sizing: border-box;
+                padding: 20px;
+                background-color: white;
+                border-radius: 5px;
+            }
+
+            #group_name {
+                font-weight: bold;
+            }
+
+            #body {
+                width: 100%;
+                height: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>メール一括送信</h1>
+            <p><a href="/top">戻る</a></p>
+            <form name="fm" onsubmit="checkmail(); return false;">
+                <p>送信先グループ</p>
+                <p><input type="search" placeholder="グループ名で検索" onkeypress="searchgroup(this, event)"></p>
+                <p><select name="group" id="grouplist"><option value selected disabled>選択されていません</option></select></p>
+                <p>件名</p>
+                <p><input type="text" name="title" maxlength="511"></p>
+                <p>本文(HTML)</p>
+                <textarea name="body" placeholder="HTML文を貼り付けてください"></textarea>
+                <p><button>送信</button></p>
+            </form>
+        </div>
+        <div id="grayback" style="display: none;">
+            <div>
+                <h2>内容確認</h2>
+                <p>グループ名: <span id="group_name"></span></p>
+                <p>送信先: <span id="group_member"></span></p>
+                <p>件名: <span id="title"></span></p>
+                <hr>
+                <div id="body"></div>
+                <hr>
+                <div>
+                    <button onclick="closegray()">修正</button>
+                    <button onclick="sendmail()">送信</button>
+                </div>
+            </div>
+        </div>
+        <script>
+            if (new URL(location).searchParams.get('resend') != null) {
+                let opt = document.createElement('option');
+                opt.innerText = sessionStorage.getItem('group_name');
+                opt.value = sessionStorage.getItem('group_id');
+                document.fm.group.innerHTML = '';
+                document.fm.group.appendChild(opt);
+                document.fm.title.value = sessionStorage.getItem('title');
+                document.fm.body.value = sessionStorage.getItem('body');
+            }
+            function searchgroup(inp, e) {
+                k = e.key;
+                if (k.length > 1) return;
+                if (inp.value + k != "") {
+                    get('/api/group', {'q': inp.value + k}).then(res => {
+                        if (res.result) {
+                            document.getElementById('grouplist').innerHTML = '';
+                            res.group.forEach(g => {
+                                let opt = document.createElement('option');
+                                opt.value = g.id;
+                                opt.innerText = g.group_name;
+                                document.getElementById('grouplist').appendChild(opt);
+                            });
+                        } else {
+                            alert(res.message);
+                        }
+                    }).catch(err => {
+                        alert("エラーにより検索に失敗しました");
+                    });
+                }
+            }
+
+            function checkmail() {
+                if (document.fm.group.value == '') {
+                    alert('送信先グループが選択されていません。');
+                    return;
+                }
+                if (document.fm.title.value == '') {
+                    alert('件名が入力されていません。');
+                    return;
+                }
+                if (document.fm.body.value == '') {
+                    alert('本文が入力されていません。');
+                    return;
+                }
+                get('/api/member', {'id': document.fm.group.value}).then(res => {
+                    if (res.result) {
+                        document.getElementById('grayback').removeAttribute('style');
+                        document.getElementById('group_name').innerText = document.querySelectorAll('#grouplist>option')[document.fm.group.selectedIndex].innerText;
+                        members = [];
+                        res.customer.forEach(c => {
+                            members.push(c.manager + '(' + c.email + ')');
+                        })
+                        document.getElementById('group_member').innerText = members.join(', ');
+                        document.getElementById('title').innerText = document.fm.title.value;
+                        document.getElementById('body').innerHTML = document.fm.body.value;
+                    } else {
+                        alert(res.message);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーによりグループ情報の取得に失敗しました。');
+                });
+            }
+
+            function closegray() {
+                document.getElementById('grayback').style.display = 'none';
+            }
+
+            function sendmail() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                post('/api/mail', data).then(res => {
+                    if (res.result) {
+                        alert('送信完了しました。');
+                        location = '/top';
+                    } else {
+                        alert(res.message);
+                        formDisabled(document.fm, false);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより送信に失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+        </script>
+    </body>
+</html>

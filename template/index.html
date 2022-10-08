@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?">
+        <script src="/st/master.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>ログイン</h1>
+            <form name="fm" onsubmit="login(); return false;">
+                <p>パスワード</p>
+                <p><input type="password" name="pass" value="" required></p>
+                <p><button>ログイン</button></p>
+            </form>
+        </div>
+        <script>
+            function login() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                post('/api/login', data).then(res => {
+                    if (res.result) {
+                        location = '/top';
+                    } else {
+                        alert(res.message);
+                        formDisabled(document.fm, false);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーによりログインに失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+        </script>
+    </body>
+</html>

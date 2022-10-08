@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?">
+        <script src="/st/master.js"></script>
+        <style>
+            #addedcus svg {
+                height: 1.5em;
+                vertical-align: middle;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>顧客グループ情報変更</h1>
+            <p><a href="/group">戻る</a></p>
+            <form name="fm" onsubmit="editgroup(); return false;">
+                <input type="hidden" name="id" value="{{ .CustomerGroup.Id }}">
+                <p>グループ名</p>
+                <p><input type="text" name="gname" maxlength="255" value="{{ .CustomerGroup.GroupName }}" required></p>
+                <p>メンバーを追加</p>
+                <p><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
+                <p><select id="customerlist"></select><input type="button" value="追加" onclick="addcus()"></p>
+                <div id="addedcus">
+                    {{ range .CustomerGroup.Members }}
+                    <div data-id="{{ .Customer.Id }}">
+                        {{ .Customer.Manager }}({{ .Customer.Email }})
+                        <label onclick="delcus('{{ .Customer.Id }}')"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></label>
+                        <input type="hidden" name="member" value="{{ .Customer.Id }}">
+                    </div>
+                    {{ end }}
+                </div>
+                <p><input type="submit" value="決定"></p>
+            </form>
+            <p><button onclick="delgroup()">この顧客グループを削除する</button></p>
+        </div>
+        <div style="display: none;">
+            <svg id="trash" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </div>
+        <script>
+            function searchcustomer(inp, e) {
+                k = e.key;
+                if (k.length > 1) return;
+                if (inp.value + k != "") {
+                    get('/api/customer', {'q': inp.value + k}).then(res => {
+                        if (res.result) {
+                            document.getElementById('customerlist').innerHTML = '';
+                            res.customer.forEach(c => {
+                                let opt = document.createElement('option');
+                                opt.value = c.id;
+                                opt.innerText = c.manager + '(' + c.email + ')';
+                                document.getElementById('customerlist').appendChild(opt);
+                            });
+                        } else {
+                            alert(res.message);
+                        }
+                    }).catch(err => {
+                        alert("エラーにより検索に失敗しました");
+                    });
+                }
+            }
+
+            function addcus() {
+                let id = document.getElementById('customerlist').value;
+                let c = document.createElement('div');
+                c.appendChild(document.createTextNode(
+                    document.querySelectorAll('#customerlist>option')[document.getElementById('customerlist').selectedIndex].innerText
+                ));
+                c.setAttribute('data-id', id);
+                let btn = document.createElement('label');
+                btn.appendChild(document.getElementById('trash').cloneNode(true));
+                btn.addEventListener('click', () => {
+                    document.querySelector('[data-id="' + id + '"]').remove();
+                });
+                c.appendChild(btn);
+                let hdn = document.createElement('input');
+                hdn.name = 'member';
+                hdn.setAttribute('type', 'hidden');
+                hdn.value = id;
+                c.appendChild(hdn);
+                document.getElementById('addedcus').appendChild(c);
+            }
+
+            function delcus(id) {
+                document.querySelector('[data-id="' + id + '"]').remove()
+            }
+
+            function editgroup() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                put('/api/group', data).then(res => {
+                    if (res.result) {
+                        alert('変更完了しました');
+                    } else {
+                        alert(res.message);
+                    }
+                    formDisabled(document.fm, false);
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより追加に失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+
+            function delgroup() {
+                if (confirm('このグループを削除します。\nよろしいですか？')) {
+                    del('/api/group/{{.CustomerGroup.Id}}', null).then(res => {
+                        if (res.result) {
+                            alert('グループを削除しました。');
+                            location = '/group';
+                        } else {
+                            alert(res.message);
+                        }
+                    }).catch(err => {
+                        console.error(err);
+                        alert('エラーにより失敗しました。');
+                    });
+                }
+            }
+        </script>
+    </body>
+</html>

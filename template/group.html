@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?a">
+        <script src="/st/master.js"></script>
+        <style>
+            #appendBox {
+                height: 2em;
+                overflow: hidden;
+            }
+
+            #appendBox>button {
+                width: 100%;
+            }
+
+            #cusList {
+                display: flex;
+                position: relative;
+                flex-wrap: wrap;
+                justify-content: space-around;
+            }
+
+            #cusList>div {
+                display: block;
+                position: relative;
+                width: 300px;
+                max-width: 100%;
+            }
+
+            @media (max-width: 600px) {
+                #cusList>div {
+                    width: 98%;
+                }
+            }
+
+            #cusList>div>div:nth-of-type(1) {
+                background-color: #e8e8e8;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            #cusList>div>div:nth-of-type(1) button {
+                display: block;
+                border: none;
+                background-color: #e8e8e8;
+            }
+
+            #cusList>div>div svg {
+                height: 1.5em;
+                vertical-align: middle;
+            }
+
+            #addedcus svg {
+                height: 1.5em;
+                vertical-align: middle;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>顧客グループ</h1>
+            <p><a href="/top">戻る</a></p>
+            <div id="appendBox">
+                <button onclick="openBox()">追加</button>
+                <form name="fm" onsubmit="appendGroup(); return false;">
+                    <p>グループ名</p>
+                    <p><input type="text" name="gname" maxlength="255" required></p>
+                    <p>メンバーを追加</p>
+                    <p><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
+                    <p><select id="customerlist"></select><input type="button" value="追加" onclick="addcus()"></p>
+                    <div id="addedcus"></div>
+                    <p><input type="submit" value="決定"></p>
+                </form>
+            </div>
+            <div id="cusList"></div>
+        </div>
+        <div style="display: none;">
+            <svg id="pencil" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            <svg id="trash" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </div>
+        <script>
+            list();
+            function list(page, sort) {
+                get('/api/group').then(res => {
+                    if (res.result) {
+                        res.group.forEach(c => {
+                            document.getElementById('cusList').appendChild(viewGroup(c));
+                        });
+                    } else {
+                        alert(res.message);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより一覧の取得に失敗しました。');
+                });
+            }
+
+            function viewGroup(c) {
+                let d = document.createElement('div');
+                let gname = document.createElement('div');
+                gname.appendChild(document.createTextNode(c.group_name));
+                let edt = document.createElement('button');
+                edt.appendChild(document.getElementById('pencil').cloneNode(true));
+                edt.setAttribute('onclick', 'editgroup(' + c.id + ')');
+                gname.appendChild(edt);
+                d.appendChild(gname);
+                let mm = document.createElement('div');
+                members = [];
+                c.members.forEach(m => {
+                    members.push(m.customer.manager);
+                });
+                mm.innerText = members.join(', ');
+                d.appendChild(mm);
+                return d;
+            }
+
+            function openBox() {
+                let ab = document.getElementById('appendBox');
+                ab.style.height = ab.style.height == 'auto' ? '2em' : 'auto';
+            }
+
+            function appendGroup() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                post('/api/group', data).then(res => {
+                    if (res.result) {
+                        location.reload();
+                    } else {
+                        alert(res.message);
+                        formDisabled(document.fm, false);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより追加に失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+
+            function editgroup(id) {
+                let query = new URLSearchParams({'id': id}).toString();
+                location = '/group/edit?' + query;
+            }
+
+            function searchcustomer(inp, e) {
+                k = e.key;
+                if (k.length > 1) return;
+                if (inp.value + k != "") {
+                    get('/api/customer', {'q': inp.value + k}).then(res => {
+                        if (res.result) {
+                            document.getElementById('customerlist').innerHTML = '';
+                            res.customer.forEach(c => {
+                                let opt = document.createElement('option');
+                                opt.value = c.id;
+                                opt.innerText = c.manager + '(' + c.email + ')';
+                                document.getElementById('customerlist').appendChild(opt);
+                            });
+                        } else {
+                            alert(res.message);
+                        }
+                    }).catch(err => {
+                        alert("エラーにより検索に失敗しました");
+                    });
+                }
+            }
+
+            function addcus() {
+                let id = document.getElementById('customerlist').value;
+                let c = document.createElement('div');
+                c.appendChild(document.createTextNode(
+                    document.querySelectorAll('#customerlist>option')[document.getElementById('customerlist').selectedIndex].innerText
+                ));
+                c.setAttribute('data-id', id);
+                let btn = document.createElement('label');
+                btn.appendChild(document.getElementById('trash').cloneNode(true));
+                btn.addEventListener('click', () => {
+                    document.querySelector('[data-id="' + id + '"]').remove();
+                });
+                c.appendChild(btn);
+                let hdn = document.createElement('input');
+                hdn.name = 'member';
+                hdn.setAttribute('type', 'hidden');
+                hdn.value = id;
+                c.appendChild(hdn);
+                document.getElementById('addedcus').appendChild(c);
+            }
+        </script>
+    </body>
+</html>

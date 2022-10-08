@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?">
+        <script src="/st/master.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>顧客情報変更</h1>
+            <p><a href="{{ .ReturnPath }}">戻る</a></p>
+            <form name="fm" onsubmit="editcus(); return false;">
+                <input type="hidden" name="id" value="{{ .Customer.Id }}">
+                <p>担当者名</p>
+                <p><input type="text" name="manager" maxlength="127" value="{{ .Customer.Manager }}" required></p>
+                <p>会社名</p>
+                <p><input type="text" name="corp" maxlength="127" value="{{ .Customer.Corp }}"></p>
+                <p>メールアドレス</p>
+                <p><input type="email" name="email" maxlength="255" value="{{ .Customer.Email }}" required></p>
+                <p>電話番号</p>
+                <p><input type="tel" name="tel" maxlength="12" value="{{ .Customer.Tel }}"></p>
+                <p>メモ</p>
+                <p><textarea name="memo">{{ .Customer.Memo }}</textarea></p>
+                <p><input type="submit" value="更新"></p>
+            </form>
+            <p><button onclick="delcus()">この顧客データを削除する</button></p>
+        </div>
+        <script>
+            function editcus() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                put('/api/customer', data).then(res => {
+                    if (res.result) {
+                        alert('変更完了しました');
+                    } else {
+                        alert(res.message);
+                    }
+                    formDisabled(document.fm, false);
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより追加に失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+
+            function delcus() {
+                if (confirm('この顧客を削除します。\nよろしいですか？')) {
+                    del('/api/customer/{{.Customer.Id}}', null).then(res => {
+                        if (res.result) {
+                            alert('顧客を削除しました。');
+                            location = '{{ .ReturnPath }}';
+                        } else {
+                            alert(res.message);
+                        }
+                    }).catch(err => {
+                        console.error(err);
+                        alert('エラーにより失敗しました。');
+                    });
+                }
+            }
+        </script>
+    </body>
+</html>
