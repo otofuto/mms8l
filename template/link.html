@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?">
+        <script src="/st/master.js"></script>
+        <style>
+            #loglist {
+                display: block;
+                position: relative;
+            }
+
+            #loglist>div {
+                background-color: rgb(244, 244, 244);
+                margin: 5px;
+            }
+
+            #loglist time {
+                color: dimgray;
+                font-size: 0.8em;
+            }
+
+            #loglist>div>div:nth-of-type(2) {
+                color: dimgray;
+                font-size: 0.8em;
+            }
+
+            #loglist>div>div:nth-of-type(3) {
+                color: dimgray;
+                font-size: 0.8em;
+            }
+
+            #loglist>div>div:nth-of-type(2):before {
+                content: 'IP: ';
+                color: black;
+            }
+
+            #loglist>div>div:nth-of-type(3):before {
+                content: 'UA: ';
+                color: black;
+            }
+
+            #grayback {
+                display: block;
+                position: fixed;
+                width: 100vw;
+                height: 100vh;
+                top: 0;
+                left: 0;
+                margin: 0;
+                padding: 10px;
+                box-sizing: border-box;
+                background-color: #0008;
+                overflow: auto;
+                backdrop-filter: blur(3px);
+            }
+
+            #grayback>div {
+                display: block;
+                position: relative;
+                width: 800px;
+                max-width: 98%;
+                height: auto;
+                top: 2%;
+                margin: 0 auto;
+                box-sizing: border-box;
+                padding: 20px;
+                background-color: white;
+                border-radius: 5px;
+            }
+
+            #emailid {
+                font-weight: bold;
+            }
+
+            #group_name {
+                font-weight: bold;
+            }
+
+            #body {
+                width: 100%;
+                height: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <h1>リンククリックログ</h1>
+            <p><a href="/top">戻る</a></p>
+            <form name="fm" method="get" action="/link">
+                <input type="hidden" name="p" value="{{ .Page }}">
+                <p>メールIDで検索</p>
+                <input type="number" name="emailid" value="{{ .ReturnPath }}">
+                <p><button>検索</button></p>
+            </form>
+            <div id="loglist">
+                {{ range .Logs }}
+                <div>
+                    <time>{{ .AccessedAt }}</time>
+                    <div><a href="javascript:checkmail({{ .EmailId }})">ID: {{ .EmailId }}[{{ .EmailTitle }}]</a>の{{ .LinkNumber }}番目のリンクを<a href="" id="{{ .EmailId }}{{ .LinkNumber }}{{ .CustomerId }}">{{ .Manager }}</a>さんがクリックしました。</div>
+                    <script>document.getElementById('{{ .EmailId }}{{ .LinkNumber }}{{ .CustomerId }}').href = '/customer/edit?id={{ .CustomerId }}&returnpath=' + location.href;</script>
+                    <div>{{ .IP }}</div>
+                    <div>{{ .UA }}</div>
+                </div>
+                {{ end }}
+            </div>
+            <div id="page">Page: {{ .Page }} / {{ .PageLength }} 全 {{ .LogCount }}件</div>
+            <div id="pagebuttons"></div>
+        </div>
+        <div id="grayback" style="display: none;">
+            <div>
+                <p>ID: <span id="emailid"></span></p>
+                <p>開封率: <span id="open_probability"></span></p>
+                <p>グループ名: <span id="group_name"></span></p>
+                <p>送信先: <span id="group_member"></span></p>
+                <p>件名: <span id="title"></span></p>
+                <hr>
+                <div id="body"></div>
+                <hr>
+                <div>
+                    <button onclick="closegray()">閉じる</button>
+                    <button onclick="resendmail()">編集</button>
+                </div>
+            </div>
+        </div>
+        <script>
+            let page = '{{ .Page }}' - 0;
+            let pagelength = '{{ .PageLength }}' - 0;
+            if (page > 4) {
+                addPageButton(1);
+            }
+            if (page > 5) {
+                document.getElementById('pagebuttons').appendChild(document.createTextNode('...'));
+            }
+            if (page > 3) {
+                addPageButton(page - 3);
+            }
+            if (page > 2) {
+                addPageButton(page - 2);
+            }
+            if (page > 1) {
+                addPageButton(page - 1);
+            }
+            document.getElementById('pagebuttons').appendChild(document.createTextNode(page));
+            if (page + 1 <= pagelength) {
+                addPageButton(page + 1);
+            }
+            if (page + 2 <= pagelength) {
+                addPageButton(page + 2);
+            }
+            if (page + 3 <= pagelength) {
+                addPageButton(page + 3);
+            }
+            if (page + 4 == pagelength) {
+                addPageButton(page + 4);
+            }
+            if (page + 4 < pagelength) {
+                document.getElementById('pagebuttons').appendChild(document.createTextNode('...'));
+                addPageButton(pagelength);
+            }
+
+            function addPageButton(p) {
+                let anc = document.createElement('a');
+                anc.innerText = p;
+                anc.href = '/link?p=' + p;
+                document.getElementById('pagebuttons').appendChild(anc);
+            }
+
+            function checkmail(id) {
+                get('/api/mail', {'id': id}).then(res => {
+                    if (res.result) {
+                        document.getElementById('grayback').removeAttribute('style');
+                        document.getElementById('emailid').innerText = res.email.id;
+                        document.getElementById('open_probability').innerText = res.email.open_count.Int64 + '/' + res.email.member_count + ' (' + Math.round(res.email.open_count.Int64 / res.email.member_count * 100) + '%)';
+                        document.getElementById('group_name').innerText = res.email.group_name;
+                        document.getElementById('group_name').setAttribute('data-groupid', res.email.group_id);
+                        document.getElementById('group_member').innerText = res.email.members;
+                        document.getElementById('title').innerText = res.email.title;
+                        document.getElementById('body').innerHTML = res.email.body;
+                    } else {
+                        alert(res.message);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーによりグループ情報の取得に失敗しました。');
+                });
+            }
+
+            function closegray() {
+                document.getElementById('grayback').style.display = 'none';
+            }
+
+            function resendmail() {
+                sessionStorage.setItem('group_name', document.getElementById('group_name').innerText);
+                sessionStorage.setItem('group_id', document.getElementById('group_name').getAttribute('data-groupid'));
+                sessionStorage.setItem('title', document.getElementById('title').innerText);
+                sessionStorage.setItem('body', document.getElementById('body').innerHTML);
+                location = '/mail?resend';
+            }
+        </script>
+    </body>
+</html>

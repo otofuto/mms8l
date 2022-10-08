@@ -41,6 +41,10 @@
                 border-radius: 5px;
             }
 
+            #emailid {
+                font-weight: bold;
+            }
+
             #group_name {
                 font-weight: bold;
             }
@@ -107,6 +111,7 @@
         </div>
         <div id="grayback" style="display: none;">
             <div>
+                <p>メールID: <span id="emailid"></span></p>
                 <p id="open_probability"></p>
                 <p>グループ名: <span id="group_name"></span></p>
                 <p>送信先: <span id="group_member"></span></p>
@@ -156,6 +161,7 @@
                 get('/api/member', {'id': group_id}).then(res => {
                     if (res.result) {
                         document.getElementById('grayback').removeAttribute('style');
+                        document.getElementById('emailid').innerText = div.querySelector('span').innerText.substring(4);
                         document.getElementById('open_probability').innerText = div.querySelector('label').innerText;
                         document.getElementById('group_name').innerText = div.querySelector('div').innerText;
                         document.getElementById('group_name').setAttribute('data-groupid', group_id);
@@ -207,6 +213,9 @@
                 div.addEventListener('click', () => {
                     checkmail(e.id);
                 });
+                let spn = document.createElement('span');
+                spn.innerText = 'ID: ' + e.id;
+                div.appendChild(spn);
                 let sent = document.createElement('time');
                 sent.innerText = e.sent_at;
                 div.appendChild(sent);

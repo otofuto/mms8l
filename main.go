@@ -14,6 +14,7 @@ import (
 	"mms8l/pkg/database"
 	"net/http"
 	"net/smtp"
+	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -78,10 +79,13 @@ func IndexHandle(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		context := struct {
 			Page          int
+			PageLength    int
 			Sort          string
 			Customer      Customer
 			ReturnPath    string
 			CustomerGroup CustomerGroup
+			Logs          []LinkAccessLog
+			LogCount      int
 		}{}
 		filename := ""
 		if r.URL.Path == "/" {
@@ -193,8 +197,55 @@ func IndexHandle(w http.ResponseWriter, r *http.Request) {
 			filename = "mail"
 		} else if r.URL.Path == "/history" {
 			filename = "history"
-		} else if r.URL.Path == "/open" {
-			filename = "open"
+		} else if r.URL.Path == "/link" {
+			filename = "link"
+			page, _ := strconv.Atoi(r.FormValue("p"))
+			context.Page = page
+			page--
+			db := database.Connect()
+			defer db.Close()
+			maxpageview := 50
+			where := ""
+			emailid, _ := strconv.Atoi(r.FormValue("emailid"))
+			if emailid > 0 {
+				where = " where email_id = " + strconv.Itoa(emailid)
+				context.ReturnPath = strconv.Itoa(emailid)
+			}
+			rows, err := db.Query("select email_id, link_number, customer_id, ua, ip, accessed_at, left(title, 15) as title, manager from link_access_log left outer join email on link_access_log.email_id = email.id left outer join customer on link_access_log.customer_id = customer.id" + where + " order by accessed_at desc limit " + strconv.Itoa(maxpageview) + " offset " + strconv.Itoa(page*maxpageview))
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "データベースエラー", 500)
+				return
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var lal LinkAccessLog
+				err = rows.Scan(&lal.EmailId, &lal.LinkNumber, &lal.CustomerId, &lal.UA, &lal.IP, &lal.AccessedAt, &lal.EmailTitle, &lal.Manager)
+				if err != nil {
+					log.Println(err)
+					http.Error(w, "データベースエラー", 500)
+					return
+				}
+				context.Logs = append(context.Logs, lal)
+			}
+			rows2, err := db.Query("select count(*) from link_access_log")
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "データベースエラー", 500)
+				return
+			}
+			defer rows2.Close()
+			rows2.Next()
+			err = rows2.Scan(&context.PageLength)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "データベースエラー", 500)
+				return
+			}
+			context.PageLength = context.PageLength / maxpageview
+			if context.PageLength-context.PageLength/maxpageview*maxpageview > 0 {
+				context.PageLength++
+			}
 		}
 		if filename == "" {
 			Page404(w)
@@ -259,7 +310,32 @@ func LogHandle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Access Denied.", 403)
 	}
 
-	//log
+	p := r.URL.Path[len("/log/"):]
+	if strings.Index(p, "/") <= 0 {
+		http.Error(w, "", 404)
+		return
+	}
+	email_id, err := strconv.Atoi(p[:strings.Index(p, "/")])
+	if err != nil {
+		http.Error(w, "email_id is not integer", 400)
+		return
+	}
+	p = p[strings.Index(p, "/")+1:]
+	if strings.Index(p, "/") <= 0 {
+		http.Error(w, "", 404)
+		return
+	}
+	customer_id, err := strconv.Atoi(p[:strings.Index(p, "/")])
+	if err != nil {
+		http.Error(w, "customer_id is not integer", 400)
+		return
+	}
+	p = p[strings.Index(p, "/")+1:]
+	link_number, err := strconv.Atoi(p)
+	if err != nil {
+		http.Error(w, "link_number is not integer", 400)
+		return
+	}
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
 	if xForwardedFor == "" {
 		xForwardedFor = r.RemoteAddr
@@ -271,38 +347,26 @@ func LogHandle(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	obj := struct {
-		Time string `json:"time"`
-		IP   string `json:"ip"`
-		UA   string `json:"ua"`
-		Path string `json:"path"`
-	}{
-		Time: time.Now().Format("2006-01-02 15:04:05"),
-		IP:   xForwardedFor,
-		UA:   r.UserAgent(),
-		Path: r.URL.Path,
+	if strings.TrimSpace(r.FormValue("url")) == "" {
+		http.Error(w, "redirect url is required", 400)
+		return
 	}
-	content, err := json.Marshal(obj)
+	db := database.Connect()
+	defer db.Close()
+	ins, err := db.Prepare("insert into link_access_log (email_id, link_number, customer_id, ua, ip) values (?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "", 500)
+		http.Redirect(w, r, r.FormValue("url"), 303)
 		return
-	} else {
-		f, err := os.OpenFile("./static/log.json", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
-		if err != nil {
-			log.Println(err)
-			http.Error(w, "", 500)
-			return
-		} else {
-			defer f.Close()
-			_, err := f.WriteString(string(content) + ",\n")
-			if err != nil {
-				log.Println(err)
-				http.Error(w, "", 500)
-				return
-			}
-		}
 	}
+	defer ins.Close()
+	_, err = ins.Exec(email_id, link_number, customer_id, r.UserAgent(), xForwardedFor)
+	if err != nil {
+		log.Println(err)
+		http.Redirect(w, r, r.FormValue("url"), 303)
+		return
+	}
+	http.Redirect(w, r, r.FormValue("url"), 303)
 }
 
 func Page404(w http.ResponseWriter) {
@@ -373,6 +437,18 @@ type Email struct {
 	SentAt      string        `json:"sent_at"`
 	MemberCount int           `json:"member_count"`
 	OpenCount   sql.NullInt64 `json:"open_count"`
+	Members     string        `json:"members"`
+}
+
+type LinkAccessLog struct {
+	EmailId    int    `json:"email_id"`
+	LinkNumber int    `json:"link_number"`
+	CustomerId int    `json:"customer_id"`
+	UA         string `json:"ua"`
+	IP         string `json:"ip"`
+	AccessedAt string `json:"accessed_at"`
+	EmailTitle string `json:"email_title"`
+	Manager    string `json:"manager"`
 }
 
 func ApiHandle(w http.ResponseWriter, r *http.Request) {
@@ -431,7 +507,8 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 				if page < 0 {
 					page = 0
 				}
-				rows, err := db.Query("select id, manager, email, corp, tel, memo, created_at from customer order by " + sort + " limit 30 offset " + strconv.Itoa(page*30))
+				maxpageview := 30
+				rows, err := db.Query("select id, manager, email, corp, tel, memo, created_at from customer order by " + sort + " limit " + strconv.Itoa(maxpageview) + " offset " + strconv.Itoa(page*maxpageview))
 				if err != nil {
 					log.Println(err)
 					ApiResponse(w, false, "データベースのエラー")
@@ -459,8 +536,8 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 				if rows2.Next() {
 					rows2.Scan(&cnt)
 				}
-				pl := cnt / 3
-				if cnt-cnt/3*30 > 0 {
+				pl := cnt / maxpageview
+				if cnt-cnt/maxpageview*maxpageview > 0 {
 					pl++
 				}
 				bytes, err := json.Marshal(struct {
@@ -595,61 +672,115 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, string(bytes))
 			return
 		} else if mode == "mail" {
-			group, _ := strconv.Atoi(r.FormValue("group"))
-			title := strings.TrimSpace(r.FormValue("title"))
-			body := r.FormValue("body")
-			db := database.Connect()
-			defer db.Close()
-			q := `select email.id, email.group_id, gname, title, body, sent_at, mem_cnt, opn_cnt
-			from email
-			left outer join customer_group on email.group_id = customer_group.id
-			left outer join (
-				select group_id, count(*) as mem_cnt from customer_group_member group by group_id
-			) as tbl_mem on email.group_id = tbl_mem.group_id
-			left outer join (
-				select email_id, count(*) as opn_cnt from open_log group by email_id
-			) as tbl_opn on email.id = tbl_opn.email_id`
-			where := make([]string, 0)
-			if group > 0 {
-				where = append(where, "group_id = "+strconv.Itoa(group))
-			}
-			if title != "" {
-				where = append(where, "title like '%"+database.Escape(title)+"%'")
-			}
-			if body != "" {
-				where = append(where, "body like '%"+database.Escape(body)+"%'")
-			}
-			if len(where) > 0 {
-				q += " where "
-			}
-			q += strings.Join(where, " and ")
-			q += " order by sent_at desc"
-			rows, err := db.Query(q)
-			if err != nil {
-				log.Println(err)
-				ApiResponse(w, false, "データベースエラー")
-				return
-			}
-			defer rows.Close()
-			ret := make([]Email, 0)
-			for rows.Next() {
-				var e Email
-				err = rows.Scan(&e.Id, &e.GroupId, &e.GroupName, &e.Title, &e.Body, &e.SentAt, &e.MemberCount, &e.OpenCount)
+			if strings.TrimSpace(r.FormValue("id")) != "" {
+				id, err := strconv.Atoi(r.FormValue("id"))
+				if err != nil {
+					ApiResponse(w, false, "idが数値ではありません。")
+					return
+				}
+				db := database.Connect()
+				defer db.Close()
+				rows, err := db.Query(`select email.id, email.group_id, title, body, sent_at, gname, members, mem_cnt, opn_cnt
+				from email
+				left outer join customer_group on email.group_id = customer_group.id
+				left outer join (
+					select group_id, group_concat(manager separator ', ') as members
+					from customer_group_member
+					left outer join customer on customer_group_member.customer_id = customer.id
+					group by group_id
+				) as tbl on email.group_id = tbl.group_id
+				left outer join (
+					select group_id, count(*) as mem_cnt
+					from customer_group_member
+					group by group_id
+				) as tbl2 on email.group_id = tbl2.group_id
+				left outer join (
+					select email_id, count(*) as opn_cnt
+					from open_log
+					group by email_id
+				) as tbl3 on email.id = tbl3.email_id
+				where email.id = ` + strconv.Itoa(id))
 				if err != nil {
 					log.Println(err)
 					ApiResponse(w, false, "データベースエラー")
 					return
 				}
-				ret = append(ret, e)
+				defer rows.Close()
+				var em Email
+				if rows.Next() {
+					err = rows.Scan(&em.Id, &em.GroupId, &em.Title, &em.Body, &em.SentAt, &em.GroupName, &em.Members, &em.MemberCount, &em.OpenCount)
+					if err != nil {
+						log.Println(err)
+						ApiResponse(w, false, "データベースエラー")
+						return
+					}
+				}
+				bytes, _ := json.Marshal(struct {
+					Result bool  `json:"result"`
+					Email  Email `json:"email"`
+				}{
+					Result: true,
+					Email:  em,
+				})
+				fmt.Fprintln(w, string(bytes))
+				return
+			} else {
+				group, _ := strconv.Atoi(r.FormValue("group"))
+				title := strings.TrimSpace(r.FormValue("title"))
+				body := r.FormValue("body")
+				db := database.Connect()
+				defer db.Close()
+				q := `select email.id, email.group_id, gname, title, body, sent_at, mem_cnt, opn_cnt
+				from email
+				left outer join customer_group on email.group_id = customer_group.id
+				left outer join (
+					select group_id, count(*) as mem_cnt from customer_group_member group by group_id
+				) as tbl_mem on email.group_id = tbl_mem.group_id
+				left outer join (
+					select email_id, count(*) as opn_cnt from open_log group by email_id
+				) as tbl_opn on email.id = tbl_opn.email_id`
+				where := make([]string, 0)
+				if group > 0 {
+					where = append(where, "group_id = "+strconv.Itoa(group))
+				}
+				if title != "" {
+					where = append(where, "title like '%"+database.Escape(title)+"%'")
+				}
+				if body != "" {
+					where = append(where, "body like '%"+database.Escape(body)+"%'")
+				}
+				if len(where) > 0 {
+					q += " where "
+				}
+				q += strings.Join(where, " and ")
+				q += " order by sent_at desc"
+				rows, err := db.Query(q)
+				if err != nil {
+					log.Println(err)
+					ApiResponse(w, false, "データベースエラー")
+					return
+				}
+				defer rows.Close()
+				ret := make([]Email, 0)
+				for rows.Next() {
+					var e Email
+					err = rows.Scan(&e.Id, &e.GroupId, &e.GroupName, &e.Title, &e.Body, &e.SentAt, &e.MemberCount, &e.OpenCount)
+					if err != nil {
+						log.Println(err)
+						ApiResponse(w, false, "データベースエラー")
+						return
+					}
+					ret = append(ret, e)
+				}
+				bytes, _ := json.Marshal(struct {
+					Result bool    `json:"result"`
+					Email  []Email `json:"email"`
+				}{
+					Result: true,
+					Email:  ret,
+				})
+				fmt.Fprintln(w, string(bytes))
 			}
-			bytes, _ := json.Marshal(struct {
-				Result bool    `json:"result"`
-				Email  []Email `json:"email"`
-			}{
-				Result: true,
-				Email:  ret,
-			})
-			fmt.Fprintln(w, string(bytes))
 			return
 		}
 		fmt.Fprintf(w, mode)
@@ -849,6 +980,7 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				src := r.Referer()
+				body = LinkReplace(src[:strings.LastIndex(src, "/")], body, int(newid), c.Id)
 				src = src[:strings.LastIndex(src, "/")] + "/img/" + strconv.Itoa(int(newid)) + "/" + strconv.Itoa(c.Id)
 				body = `<div style="display: block; position: absolute; left: 0; top: 0px; z-index: -1;"><img src="` + src + `"></div>` + body
 				err = SendMail(c.Manager, c.Email, title, body)
@@ -1057,6 +1189,30 @@ func ApiResponse(w http.ResponseWriter, result bool, msg string) {
 		return
 	}
 	fmt.Fprintln(w, string(bytes))
+}
+
+func LinkReplace(host, body string, email_id, customer_id int) string {
+	links := make([]string, 0)
+	str := body
+	for strings.Index(str, " href=\"") >= 0 {
+		href := str[strings.Index(str, " href=\"")+len(" href=\""):]
+		if strings.Index(href, "\"") >= 0 {
+			href = href[:strings.Index(href, "\"")]
+		}
+		str = str[strings.Index(str, " href=\""+href)+len(" href=\""+href):]
+		if strings.HasPrefix(href, "//") || strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
+			links = append(links, href)
+		}
+	}
+	for i := 0; i < len(links); i++ {
+		newhref := host + "/log/" + strconv.Itoa(email_id) + "/" + strconv.Itoa(customer_id) + "/" + strconv.Itoa(i) + "?url="
+		if strings.HasPrefix(links[i], "//") {
+			newhref += "https:"
+		}
+		newhref += url.QueryEscape(links[i])
+		body = strings.Replace(body, " href=\""+links[i], " href=\""+newhref, 1)
+	}
+	return body
 }
 
 func ImgHandle(w http.ResponseWriter, r *http.Request) {
