@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>MMS8L</title>
+        <link rel="stylesheet" href="/st/style.css?">
+        <script src="/st/master.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>顧客データインポート</h1>
+            <p><a href="/top">戻る</a></p>
+            <div>
+                <p>CSVファイルを読み込み</p>
+                <p><input type="file" id="fl" onchange="loadfile(this)"></p>
+                <p>※CSVファイルは1行目がヘッダーになっており、「担当者」「メールアドレス」「会社名」「電話番号」「メモ」の列が必要です。<br>必須項目は「担当者」「メールアドレス」です。</p>
+            </div>
+            <div id="readresult">
+                <p><span id="columnnames"></span>が検出されました。</p>
+                <p><span id="rowlength"></span>行のデータを登録できます。</p>
+                <form name="fm" onsubmit="sendlist(); return false;">
+                    <input type="hidden" name="json">
+                    <button>登録実行</button>
+                </form>
+            </div>
+        </div>
+        <script>
+            function loadfile(fl) {
+                if (fl.files.length == 0) {
+                    return
+                }
+                let reader = new FileReader();
+                reader.onload = () => {
+                    let lines = reader.result.split('\n');
+                    let arr = [];
+                    let ex_manager = -1;
+                    let ex_email = -1;
+                    let ex_corp = -1;
+                    let ex_tel = -1;
+                    let ex_memo = -1;
+                    lines.forEach((ln, li) => {
+                        let inquote = false;
+                        let columns = [];
+                        let str = '';
+                        for (let i = 0; i < ln.length; i++) {
+                            if (ln.charAt(i) == '"') {
+                                inquote = !inquote;
+                                continue;
+                            }
+                            if (ln.charAt(i) == ',' && !inquote) {
+                                columns.push(str.trim());
+                                str = '';
+                                continue
+                            }
+                            str += ln.charAt(i);
+                        }
+                        columns.push(str.trim());
+                        if (li == 0) {
+                            columns.forEach((col, ci) => {
+                                if (col == '担当者') ex_manager = ci;
+                                else if (col == 'メールアドレス') ex_email = ci;
+                                else if (col == '会社名') ex_corp = ci;
+                                else if (col == '電話番号') ex_tel = ci;
+                                else if (col == 'メモ') ex_memo = ci;
+                            });
+                            let cn = [];
+                            if (ex_manager >= 0) cn.push('担当者');
+                            else {
+                                alert('ヘッダーに「担当者」が含まれていません。');
+                                return;
+                            }
+                            if (ex_email >= 0) cn.push('メールアドレス');
+                            else {
+                                alert('ヘッダーに「メールアドレス」が含まれていません。');
+                                return;
+                            }
+                            if (ex_corp >= 0) cn.push('会社名');
+                            if (ex_tel >= 0) cn.push('電話番号');
+                            if (ex_memo >= 0) cn.push('メモ');
+                            document.getElementById('columnnames').innerText = cn.join(', ');
+                        } else {
+                            let newcolumn = ['', '', '', '', ''];
+                            columns.forEach((col, ci) => {
+                                if (ci == ex_manager) newcolumn[0] = col;
+                                else if (ci == ex_email) newcolumn[1] = col;
+                                else if (ci == ex_corp) newcolumn[2] = col;
+                                else if (ci == ex_tel) newcolumn[3] = col;
+                                else if (ci == ex_memo) newcolumn[4] = col;
+                            });
+                            arr.push(newcolumn);
+                        }
+                    });
+                    console.log(arr);
+                    document.getElementById('rowlength').innerText = arr.length;
+                    document.fm.json.value = JSON.stringify(arr);
+                };
+                reader.readAsText(fl.files[0]);
+            }
+
+            function sendlist() {
+                let data = new FormData(document.fm);
+                formDisabled(document.fm, true);
+                post('/api/import', data).then(res => {
+                    if (res.result) {
+                        alert('登録しました。');
+                        location = '/top';
+                    } else {
+                        alert(res.message);
+                        formDisabled(document.fm, false);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert('エラーにより登録に失敗しました。');
+                    formDisabled(document.fm, false);
+                });
+            }
+        </script>
+    </body>
+</html>

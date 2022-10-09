@@ -246,6 +246,8 @@ func IndexHandle(w http.ResponseWriter, r *http.Request) {
 			if context.PageLength-context.PageLength/maxpageview*maxpageview > 0 {
 				context.PageLength++
 			}
+		} else if r.URL.Path == "/import" {
+			filename = "import"
 		}
 		if filename == "" {
 			Page404(w)
@@ -993,6 +995,53 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 				ApiResponse(w, false, "以下のアドレスへの送信に失敗しました。\n"+strings.Join(errorList, "\n"))
 				return
 			}
+			ApiResponse(w, true, "")
+			return
+		} else if mode == "import" {
+			if r.FormValue("json") == "" {
+				ApiResponse(w, false, "データが送信されていません")
+				return
+			}
+			var list [][]string
+			err := json.Unmarshal([]byte(r.FormValue("json")), &list)
+			if err != nil {
+				log.Println(err)
+				ApiResponse(w, false, "データの形式が間違っています")
+				return
+			}
+			for _, col := range list {
+				if len(col) != 5 {
+					ApiResponse(w, false, "データの構成が間違っています")
+					return
+				}
+			}
+			db := database.Connect()
+			defer db.Close()
+			tx, err := db.Begin()
+			if err != nil {
+				log.Println(err)
+				ApiResponse(w, false, "データベースエラー")
+				return
+			}
+			for _, col := range list {
+				ins, err := tx.Prepare("insert into customer (manager, email, corp, tel, memo) values (?, ?, ?, ?, ?)")
+				if err != nil {
+					log.Println(err)
+					tx.Rollback()
+					ApiResponse(w, false, "データベースエラー")
+					return
+				}
+				_, err = ins.Exec(col[0], col[1], col[2], col[3], col[4])
+				if err != nil {
+					log.Println(err)
+					ins.Close()
+					tx.Rollback()
+					ApiResponse(w, false, "データベースエラー")
+					return
+				}
+				ins.Close()
+			}
+			tx.Commit()
 			ApiResponse(w, true, "")
 			return
 		}
