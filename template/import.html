@@ -6,22 +6,31 @@
         <title>MMS8L</title>
         <link rel="stylesheet" href="/st/style.css?">
         <script src="/st/master.js"></script>
+        <style>
+            #readresult {
+                border: solid 1px black;
+                border-radius: 7px;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+        </style>
     </head>
     <body>
+        <header><div>MMS8L - 顧客データインポート</div></header>
         <div>
-            <h1>顧客データインポート</h1>
             <p><a href="/top">戻る</a></p>
             <div>
                 <p>CSVファイルを読み込み</p>
                 <p><input type="file" id="fl" onchange="loadfile(this)"></p>
-                <p>※CSVファイルは1行目がヘッダーになっており、「担当者」「メールアドレス」「会社名」「電話番号」「メモ」の列が必要です。<br>必須項目は「担当者」「メールアドレス」です。</p>
+                <p style="font-size: 0.9em;">※CSVファイルは1行目がヘッダーになっており、「担当者」「メールアドレス」「会社名」「電話番号」「メモ」の列が登録されます。</p>
+                <p style="font-size: 0.9em;">※必須項目は「担当者」「メールアドレス」です。</p>
             </div>
-            <div id="readresult">
+            <div id="readresult" style="display: none;">
                 <p><span id="columnnames"></span>が検出されました。</p>
                 <p><span id="rowlength"></span>行のデータを登録できます。</p>
                 <form name="fm" onsubmit="sendlist(); return false;">
                     <input type="hidden" name="json">
-                    <button>登録実行</button>
+                    <p style="text-align: center;"><button>登録実行</button></p>
                 </form>
             </div>
         </div>
@@ -94,6 +103,7 @@
                     console.log(arr);
                     document.getElementById('rowlength').innerText = arr.length;
                     document.fm.json.value = JSON.stringify(arr);
+                    document.getElementById('readresult').removeAttribute('style');
                 };
                 reader.readAsText(fl.files[0]);
             }

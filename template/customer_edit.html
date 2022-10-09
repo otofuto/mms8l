@@ -8,24 +8,21 @@
         <script src="/st/master.js"></script>
     </head>
     <body>
+        <header><div>MMS8L - 顧客情報変更</div></header>
         <div>
-            <h1>顧客情報変更</h1>
             <p><a href="{{ .ReturnPath }}">戻る</a></p>
             <form name="fm" onsubmit="editcus(); return false;">
                 <input type="hidden" name="id" value="{{ .Customer.Id }}">
-                <p>担当者名</p>
-                <p><input type="text" name="manager" maxlength="127" value="{{ .Customer.Manager }}" required></p>
-                <p>会社名</p>
-                <p><input type="text" name="corp" maxlength="127" value="{{ .Customer.Corp }}"></p>
-                <p>メールアドレス</p>
-                <p><input type="email" name="email" maxlength="255" value="{{ .Customer.Email }}" required></p>
-                <p>電話番号</p>
-                <p><input type="tel" name="tel" maxlength="12" value="{{ .Customer.Tel }}"></p>
-                <p>メモ</p>
-                <p><textarea name="memo">{{ .Customer.Memo }}</textarea></p>
-                <p><input type="submit" value="更新"></p>
+                <p><label>担当者名</label><input type="text" name="manager" maxlength="127" value="{{ .Customer.Manager }}" placeholder="山田太郎" required></p>
+                <p><label>会社名</label><input type="text" name="corp" maxlength="127" value="{{ .Customer.Corp }}" placeholder="○○商事"></p>
+                <p><label>メールアドレス</label><input type="email" name="email" maxlength="255" value="{{ .Customer.Email }}" placeholder="example@company.com" required></p>
+                <p><label>電話番号</label><input type="tel" name="tel" maxlength="12" value="{{ .Customer.Tel }}" placeholder="000-0000-0000"></p>
+                <p><label>メモ</label></p>
+                <p><textarea name="memo" placeholder="自由に入力できます">{{ .Customer.Memo }}</textarea></p>
+                <p style="text-align: center;"><button>更新</button></p>
             </form>
-            <p><button onclick="delcus()">この顧客データを削除する</button></p>
+            <div style="min-height: 50px;"></div>
+            <p><button onclick="delcus()" style="color: red; border-color: red;">この顧客データを削除する</button></p>
         </div>
         <script>
             function editcus() {

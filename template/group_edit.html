@@ -14,16 +14,14 @@
         </style>
     </head>
     <body>
+        <header><div>MMS8L - 顧客グループ情報変更</div></header>
         <div>
-            <h1>顧客グループ情報変更</h1>
             <p><a href="/group">戻る</a></p>
             <form name="fm" onsubmit="editgroup(); return false;">
                 <input type="hidden" name="id" value="{{ .CustomerGroup.Id }}">
-                <p>グループ名</p>
-                <p><input type="text" name="gname" maxlength="255" value="{{ .CustomerGroup.GroupName }}" required></p>
-                <p>メンバーを追加</p>
-                <p><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
-                <p><select id="customerlist"></select><input type="button" value="追加" onclick="addcus()"></p>
+                <p><label>グループ名</label><input type="text" name="gname" maxlength="255" placeholder="グループ名" value="{{ .CustomerGroup.GroupName }}" required></p>
+                <p><label>メンバーを追加</label><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
+                <p><select id="customerlist"><option value selected disabled>選択されていません</option></select><input type="button" value="追加" onclick="addcus()"></p>
                 <div id="addedcus">
                     {{ range .CustomerGroup.Members }}
                     <div data-id="{{ .Customer.Id }}">
@@ -33,9 +31,10 @@
                     </div>
                     {{ end }}
                 </div>
-                <p><input type="submit" value="変更"></p>
+                <p style="text-align: center;"><button>更新</button></p>
             </form>
-            <p><button onclick="delgroup()">この顧客グループを削除する</button></p>
+            <div style="min-height: 50px;"></div>
+            <p><button onclick="delgroup()" style="color: red; border-color: red;">この顧客グループを削除する</button></p>
         </div>
         <div style="display: none;">
             <svg id="trash" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>

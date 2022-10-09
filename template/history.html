@@ -8,50 +8,11 @@
         <script src="/st/master.js"></script>
         <style>
             form {
+                display: block;
                 border: solid 0.5px;
                 border-radius: 5px;
-            }
-
-            #grayback {
-                display: block;
-                position: fixed;
-                width: 100vw;
-                height: 100vh;
-                top: 0;
-                left: 0;
-                margin: 0;
-                padding: 10px;
+                padding: 5px 20px;
                 box-sizing: border-box;
-                background-color: #0008;
-                overflow: auto;
-                backdrop-filter: blur(3px);
-            }
-
-            #grayback>div {
-                display: block;
-                position: relative;
-                width: 800px;
-                max-width: 98%;
-                height: auto;
-                top: 2%;
-                margin: 0 auto;
-                box-sizing: border-box;
-                padding: 20px;
-                background-color: white;
-                border-radius: 5px;
-            }
-
-            #emailid {
-                font-weight: bold;
-            }
-
-            #group_name {
-                font-weight: bold;
-            }
-
-            #body {
-                width: 100%;
-                height: auto;
             }
 
             #maillist {
@@ -91,22 +52,23 @@
         </style>
     </head>
     <body>
+        <header><div>MMS8L - メール送信履歴</div></header>
         <div>
-            <h1>メール送信履歴</h1>
             <p><a href="/top">戻る</a></p>
             <form name="fm" onsubmit="searchmail(); return false;">
-                <p>履歴検索</p>
-                <p>送信先グループ</p>
-                <p><input type="search" placeholder="グループ名で検索" onkeypress="searchgroup(this, event)"></p>
-                <p><select name="group" id="grouplist">
-                    <option value selected>選択なし</option>
-                </select></p>
-                <p>件名</p>
-                <p><input type="text" name="title" maxlength="511"></p>
-                <p>本文(HTML)</p>
-                <input type="text" name="body" maxlength="511">
-                <p><button>検索</button></p>
+                <h2>履歴検索</h2>
+                <p>
+                    <label>送信先グループ</label>
+                    <input type="search" placeholder="グループ名で検索" onkeypress="searchgroup(this, event)">
+                    <select name="group" id="grouplist">
+                        <option value selected>選択なし</option>
+                    </select>
+                </p>
+                <p><label>件名</label><input type="text" name="title" maxlength="511" placeholder="件名(部分一致)"></p>
+                <p><label>本文(HTML)</label><input type="text" name="body" maxlength="511" placeholder="本文(部分一致)"></p>
+                <p style="text-align: center;"><button>検索</button></p>
             </form>
+            <div style="min-height: 10px;"></div>
             <div id="maillist"></div>
         </div>
         <div id="grayback" style="display: none;">

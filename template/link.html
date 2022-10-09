@@ -7,6 +7,14 @@
         <link rel="stylesheet" href="/st/style.css?">
         <script src="/st/master.js"></script>
         <style>
+            form {
+                display: block;
+                border: solid 0.5px;
+                border-radius: 5px;
+                padding: 5px 20px;
+                box-sizing: border-box;
+            }
+
             #loglist {
                 display: block;
                 position: relative;
@@ -41,60 +49,18 @@
                 content: 'UA: ';
                 color: black;
             }
-
-            #grayback {
-                display: block;
-                position: fixed;
-                width: 100vw;
-                height: 100vh;
-                top: 0;
-                left: 0;
-                margin: 0;
-                padding: 10px;
-                box-sizing: border-box;
-                background-color: #0008;
-                overflow: auto;
-                backdrop-filter: blur(3px);
-            }
-
-            #grayback>div {
-                display: block;
-                position: relative;
-                width: 800px;
-                max-width: 98%;
-                height: auto;
-                top: 2%;
-                margin: 0 auto;
-                box-sizing: border-box;
-                padding: 20px;
-                background-color: white;
-                border-radius: 5px;
-            }
-
-            #emailid {
-                font-weight: bold;
-            }
-
-            #group_name {
-                font-weight: bold;
-            }
-
-            #body {
-                width: 100%;
-                height: auto;
-            }
         </style>
     </head>
     <body>
+        <header><div>MMS8L - リンククリックログ</div></header>
         <div>
-            <h1>リンククリックログ</h1>
             <p><a href="/top">戻る</a></p>
             <form name="fm" method="get" action="/link">
                 <input type="hidden" name="p" value="{{ .Page }}">
-                <p>メールIDで検索</p>
-                <input type="number" name="emailid" value="{{ .ReturnPath }}">
-                <p><button>検索</button></p>
+                <p><label>メールIDで検索</label><input type="number" name="emailid" value="{{ .ReturnPath }}" placeholder="半角の整数で入力"></p>
+                <p style="text-align: center;"><button>検索</button></p>
             </form>
+            <div style="min-height: 10px;"></div>
             <div id="loglist">
                 {{ range .Logs }}
                 <div>
@@ -106,6 +72,7 @@
                 </div>
                 {{ end }}
             </div>
+            <hr>
             <div id="page">Page: {{ .Page }} / {{ .PageLength }} 全 {{ .LogCount }}件</div>
             <div id="pagebuttons"></div>
         </div>

@@ -10,6 +10,8 @@
             #appendBox {
                 height: 2em;
                 overflow: hidden;
+                padding: 0 10px;
+                box-sizing: border-box;
             }
 
             #appendBox>button {
@@ -61,21 +63,20 @@
         </style>
     </head>
     <body>
+        <header><div>MMS8L - 顧客グループ</div></header>
         <div>
-            <h1>顧客グループ</h1>
             <p><a href="/top">戻る</a></p>
             <div id="appendBox">
-                <button onclick="openBox()">追加</button>
+                <button onclick="openBox()">新規追加</button>
                 <form name="fm" onsubmit="appendGroup(); return false;">
-                    <p>グループ名</p>
-                    <p><input type="text" name="gname" maxlength="255" required></p>
-                    <p>メンバーを追加</p>
-                    <p><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
-                    <p><select id="customerlist"></select><input type="button" value="追加" onclick="addcus()"></p>
+                    <p><label>グループ名</label><input type="text" name="gname" maxlength="255" placeholder="グループ名" required></p>
+                    <p><label>メンバーを追加</label><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
+                    <p><select id="customerlist"><option value selected disabled>選択されていません</option></select><input type="button" value="追加" onclick="addcus()"></p>
                     <div id="addedcus"></div>
-                    <p><input type="submit" value="決定"></p>
+                    <p><button>決定</button></p>
                 </form>
             </div>
+            <div style="min-height: 10px;"></div><hr>
             <div id="cusList"></div>
         </div>
         <div style="display: none;">

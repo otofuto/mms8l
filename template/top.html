@@ -6,18 +6,50 @@
         <title>MMS8L</title>
         <link rel="stylesheet" href="/st/style.css?">
         <script src="/st/master.js"></script>
+        <style>
+            #menu {
+                display: block;
+            }
+
+            #menu>a {
+                text-decoration: none;
+                display: block;
+                position: relative;
+                min-width: 150px;
+                max-width: 280px;
+                padding: 5px 10px;
+                border: solid 1.5px dimgray;
+                border-radius: 8px;
+                margin: 10px;
+                text-align: center;
+                background-color: white;
+                color: black;
+                transition: all 300ms ease;
+            }
+
+            #menu>a:hover {
+                background-color: gray;
+                color: white;
+            }
+        </style>
     </head>
     <body>
+        <header><div>MMS8L - メニュー</div></header>
         <div>
-            <h1>メニュー</h1>
-            <div>
-                <p><a href="/customer?p=1&s=id">顧客リスト</a></p>
-                <p><a href="/import">顧客データインポート</a></p>
-                <p><a href="/group">顧客グループ</a></p>
-                <p><a href="/mail">一括送信</a></p>
-                <p><a href="/history">送信履歴</a></p>
-                <p><a href="/link?p=1">リンククリックログ</a></p>
-                <p><a href="/logout">ログアウト</a></p>
+            <div id="menu">
+                <a href="/customer?p=1&s=id">顧客リスト</a>
+                <p>顧客データの追加、編集、検索ができます。<br><br></p>
+                <a href="/import">顧客データインポート</a>
+                <p>CSVファイルから顧客データを一括で登録できます。<br><br></p>
+                <a href="/group">顧客グループ</a>
+                <p>メールの一括送信をするためのグループを作成、編集、検索できます。<br><br></p>
+                <a href="/mail">一括送信</a>
+                <p>顧客グループを選択し、HTMLメールを一括送信します。<br><br></p>
+                <a href="/history">送信履歴</a>
+                <p>一括送信したメールを検索できます。<br><br></p>
+                <a href="/link?p=1">リンククリックログ</a>
+                <p>一括送信したメール内に含まれるリンクを誰がクリックしたのか確認できます。<br><br></p>
+                <a href="/logout">ログアウト</a>
             </div>
         </div>
         <script>
