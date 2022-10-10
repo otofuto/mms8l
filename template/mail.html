@@ -14,7 +14,7 @@
             <form name="fm" onsubmit="checkmail(); return false;">
                 <p>
                     <label>送信先グループ</label>
-                    <input type="search" placeholder="グループ名で検索" onkeypress="searchgroup(this, event)">
+                    <input type="search" placeholder="グループ名で検索" onkeydown="searchgroup(this, event)">
                     <select name="group" id="grouplist"><option value selected disabled>選択されていません</option></select>
                 </p>
                 <p><label>件名</label><input type="text" name="title" maxlength="511" placeholder="件名"></p>
@@ -50,6 +50,7 @@
             }
             function searchgroup(inp, e) {
                 k = e.key;
+                if (k == 'Enter') k = '';
                 if (k.length > 1) return;
                 if (inp.value + k != "") {
                     get('/api/group', {'q': inp.value + k}).then(res => {
