@@ -20,7 +20,7 @@
             <form name="fm" onsubmit="editgroup(); return false;">
                 <input type="hidden" name="id" value="{{ .CustomerGroup.Id }}">
                 <p><label>グループ名</label><input type="text" name="gname" maxlength="255" placeholder="グループ名" value="{{ .CustomerGroup.GroupName }}" required></p>
-                <p><label>メンバーを追加</label><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
+                <p><label>メンバーを追加</label><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeydown="searchcustomer(this, event)"></p>
                 <p><select id="customerlist"><option value selected disabled>選択されていません</option></select><input type="button" value="追加" onclick="addcus()"></p>
                 <div id="addedcus">
                     {{ range .CustomerGroup.Members }}

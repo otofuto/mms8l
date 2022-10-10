@@ -70,7 +70,7 @@
                 <button onclick="openBox()">新規追加</button>
                 <form name="fm" onsubmit="appendGroup(); return false;">
                     <p><label>グループ名</label><input type="text" name="gname" maxlength="255" placeholder="グループ名" required></p>
-                    <p><label>メンバーを追加</label><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeypress="searchcustomer(this, event)"></p>
+                    <p><label>メンバーを追加</label><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeydown="searchcustomer(this, event)"></p>
                     <p><select id="customerlist"><option value selected disabled>選択されていません</option></select><input type="button" value="追加" onclick="addcus()"></p>
                     <div id="addedcus"></div>
                     <p><button>決定</button></p>
@@ -148,6 +148,7 @@
 
             function searchcustomer(inp, e) {
                 k = e.key;
+                if (k == 'Enter') k = '';
                 if (k.length > 1) return;
                 if (inp.value + k != "") {
                     get('/api/customer', {'q': inp.value + k}).then(res => {
