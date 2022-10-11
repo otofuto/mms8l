@@ -1304,8 +1304,6 @@ func ImgHandle(w http.ResponseWriter, r *http.Request) {
 		_, err = ins.Exec(email_id, customer_id, r.UserAgent(), xForwardedFor)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "データベースエラー", 500)
-			return
 		}
 		im, err := os.Open("./static/i.png")
 		if err != nil {
