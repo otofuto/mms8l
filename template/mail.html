@@ -15,8 +15,10 @@
                 <p>
                     <label>送信先グループ</label>
                     <input type="search" placeholder="グループ名で検索" onkeydown="searchgroup(this, event)">
-                    <select name="group" id="grouplist"><option value selected disabled>選択されていません</option></select>
                 </p>
+                <div id="groups"></div>
+                <input type="hidden" name="group">
+                <p><label></label><input type="text" name="group_name" placeholder="グループ未選択" readonly></p>
                 <p><label>件名</label><input type="text" name="title" maxlength="511" placeholder="件名"></p>
                 <p><label>本文(HTML)</label></p>
                 <textarea name="body" placeholder="HTML文を貼り付けてください"></textarea>
@@ -48,6 +50,7 @@
                 document.fm.title.value = sessionStorage.getItem('title');
                 document.fm.body.value = sessionStorage.getItem('body');
             }
+
             function searchgroup(inp, e) {
                 k = e.key;
                 if (k == 'Enter') k = '';
@@ -55,12 +58,18 @@
                 if (inp.value + k != "") {
                     get('/api/group', {'q': inp.value + k}).then(res => {
                         if (res.result) {
-                            document.getElementById('grouplist').innerHTML = '';
+                            document.getElementById('groups').innerHTML = '';
                             res.group.forEach(g => {
-                                let opt = document.createElement('option');
-                                opt.value = g.id;
-                                opt.innerText = g.group_name;
-                                document.getElementById('grouplist').appendChild(opt);
+                                let btn = document.createElement('input');
+                                btn.setAttribute('type', 'button');
+                                btn.value = g.group_name;
+                                btn.addEventListener('click', () => {
+                                    document.fm.group.value = g.id;
+                                    document.fm.group_name.value = g.group_name;
+                                    document.getElementById('groups').innerHTML = '';
+                                    inp.value = '';
+                                });
+                                document.getElementById('groups').appendChild(btn);
                             });
                         } else {
                             alert(res.message);
@@ -70,6 +79,8 @@
                     });
                 }
             }
+
+            let data = null;
 
             function checkmail() {
                 if (document.fm.group.value == '') {
@@ -84,10 +95,11 @@
                     alert('本文が入力されていません。');
                     return;
                 }
+                data = new FormData(document.fm);
                 get('/api/member', {'id': document.fm.group.value}).then(res => {
                     if (res.result) {
                         document.getElementById('grayback').removeAttribute('style');
-                        document.getElementById('group_name').innerText = document.querySelectorAll('#grouplist>option')[document.fm.group.selectedIndex].innerText;
+                        document.getElementById('group_name').innerText = document.fm.group_name.value;
                         members = [];
                         res.customer.forEach(c => {
                             members.push(c.manager + '(' + c.email + ')');
@@ -109,7 +121,10 @@
             }
 
             function sendmail() {
-                let data = new FormData(document.fm);
+                if (data == null) {
+                    alert("再度開き直してください");
+                    return
+                }
                 formDisabled(document.fm, true);
                 post('/api/mail', data).then(res => {
                     if (res.result) {

@@ -900,6 +900,10 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+			if len(members) == 0 {
+				ApiResponse(w, false, "メンバーが追加されていません")
+				return
+			}
 			db := database.Connect()
 			defer db.Close()
 			ins1, err := db.Prepare("insert into customer_group (gname) values (?)")
@@ -1103,6 +1107,10 @@ func ApiHandle(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 				}
+			}
+			if len(members) == 0 {
+				ApiResponse(w, false, "メンバーがいません")
+				return
 			}
 			db := database.Connect()
 			defer db.Close()

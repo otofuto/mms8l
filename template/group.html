@@ -56,9 +56,12 @@
                 vertical-align: middle;
             }
 
-            #addedcus svg {
-                height: 1.5em;
-                vertical-align: middle;
+            #checks>label {
+                display: block;
+            }
+
+            #checks input[type="checkbox"] {
+                min-width: auto;
             }
         </style>
     </head>
@@ -71,8 +74,7 @@
                 <form name="fm" onsubmit="appendGroup(); return false;">
                     <p><label>グループ名</label><input type="text" name="gname" maxlength="255" placeholder="グループ名" required></p>
                     <p><label>メンバーを追加</label><input type="search" placeholder="顧客名またはメールアドレスで検索" onkeydown="searchcustomer(this, event)"></p>
-                    <p><select id="customerlist"><option value selected disabled>選択されていません</option></select><input type="button" value="追加" onclick="addcus()"></p>
-                    <div id="addedcus"></div>
+                    <div id="checks"></div>
                     <p><button>決定</button></p>
                 </form>
             </div>
@@ -153,12 +155,24 @@
                 if (inp.value + k != "") {
                     get('/api/customer', {'q': inp.value + k}).then(res => {
                         if (res.result) {
-                            document.getElementById('customerlist').innerHTML = '';
+                            let added_id = [];
+                            document.getElementById('checks').querySelectorAll('input').forEach(inp => {
+                                if (!inp.checked) inp.parentNode.remove();
+                                else added_id.push(inp.value);
+                            });
                             res.customer.forEach(c => {
-                                let opt = document.createElement('option');
-                                opt.value = c.id;
-                                opt.innerText = c.manager + '(' + c.email + ')';
-                                document.getElementById('customerlist').appendChild(opt);
+                                if (!added_id.includes(c.id + '')) {
+                                    let lbl = document.createElement('label');
+                                    let chk = document.createElement('input');
+                                    chk.setAttribute('type', 'checkbox');
+                                    chk.name = 'member';
+                                    chk.value = c.id;
+                                    lbl.appendChild(chk);
+                                    let spn = document.createElement('span');
+                                    spn.innerText = c.manager + '(' + c.email + ')';
+                                    lbl.appendChild(spn);
+                                    document.getElementById('checks').appendChild(lbl);
+                                }
                             });
                         } else {
                             alert(res.message);
