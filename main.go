@@ -49,7 +49,7 @@ func main() {
 	log.Println("Listening on port: " + port)
 	if port == "443" {
 		log.Println("SSL")
-		if err := http.Serve(autocert.NewListener("mms.klcorp.tokyo"), mux); err != nil {
+		if err := http.Serve(autocert.NewListener("kai.klcorp.tokyo"), mux); err != nil {
 			panic(err)
 		}
 	} else if err := http.ListenAndServe(":"+port, mux); err != nil {
