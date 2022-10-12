@@ -42,11 +42,8 @@
         </div>
         <script>
             if (new URL(location).searchParams.get('resend') != null) {
-                let opt = document.createElement('option');
-                opt.innerText = sessionStorage.getItem('group_name');
-                opt.value = sessionStorage.getItem('group_id');
-                document.fm.group.innerHTML = '';
-                document.fm.group.appendChild(opt);
+                document.fm.group_name.value = sessionStorage.getItem('group_name');
+                document.fm.group.value = sessionStorage.getItem('group_id');
                 document.fm.title.value = sessionStorage.getItem('title');
                 document.fm.body.value = sessionStorage.getItem('body');
             }
